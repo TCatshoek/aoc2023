@@ -1,37 +1,47 @@
-use aho_corasick::{AhoCorasick, MatchKind};
-
-
 
 fn solve(input: &str) -> i32 {
-
-    let patterns = &["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-    let replacements = &["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-    let ac = AhoCorasick::builder()
-        .match_kind(MatchKind::LeftmostFirst)
-        .build(patterns).unwrap();
-
+    
+    let mapping = vec![
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("8", 8),
+        ("9", 9),
+        ("one", 1),
+        ("two", 2),
+        ("three", 3),
+        ("four", 4),
+        ("five", 5),
+        ("six", 6),
+        ("seven", 7),
+        ("eight", 8),
+        ("nine", 9),
+    ];
+    
     return input.lines()
-        .map(|line| {
-            let l = ac.replace_all(line, replacements);
-            println!("{}", l);
-            l
-        })
         .map(|line| {
             let mut first = None;
             let mut last = None;
-            for char in line.chars() {
-                match char {
-                    '0'..='9' => {
+
+            for i in 0..line.len() {
+                let line_rest = &line[i..];
+
+                for (from, to) in &mapping {
+                    if line_rest.starts_with(from) {
                         if first == None {
-                            first = Some(char);
+                            first = Some(to);
                         }
-                        last = Some(char);
+                        last = Some(to);
+                        break;
                     }
-                    _ => {}
                 }
             }
-            let s: String = [first.unwrap(), last.unwrap()].iter().collect();
-            return s.parse::<i32>().unwrap();
+
+            return first.unwrap() * 10 + last.unwrap();
         }).sum();
 }
 
@@ -77,15 +87,8 @@ five8threeonedl
 
     #[test]
     fn replacer() {
-        let input = "eightwofhfhdj9";
-
-        let patterns = &["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
-        let replacements = &["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-        let ac = AhoCorasick::builder()
-            .match_kind(MatchKind::LeftmostFirst)
-            .build(patterns).unwrap();
-
-        assert_eq!(ac.replace_all(input, replacements), "8wofhfhdj9");
+        let input = "eightwo";
+        assert_eq!(solve(input), 82);
     }
 
 
