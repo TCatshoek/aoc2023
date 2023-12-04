@@ -1,65 +1,5 @@
-use std::cell::Cell;
-use std::collections::BTreeSet;
-use itertools::Itertools;
-
-struct Card {
-    card_id: u32,
-    winning_numbers: BTreeSet<u32>,
-    card_numbers: BTreeSet<u32>,
-    num_matching: Cell<Option<usize>>,
-}
-
-impl Card {
-    fn from_str(input: &str) -> Self {
-        let (card_str, numbers_str) = input.split(':').collect_tuple().unwrap();
-
-        let card_id = card_str.split_whitespace()
-            .nth(1).unwrap()
-            .parse().unwrap();
-
-        let (winning_numbers_str, card_numbers_str) = numbers_str.split(" | ").collect_tuple().unwrap();
-
-        let winning_numbers = BTreeSet::from_iter(
-            winning_numbers_str
-                .split_whitespace()
-                .map(|n| n.parse().unwrap())
-        );
-        let card_numbers = BTreeSet::from_iter(
-            card_numbers_str
-                .split_whitespace()
-                .map(|n| n.parse().unwrap())
-        );
-
-        Self {
-            card_id,
-            winning_numbers,
-            card_numbers,
-            num_matching: None.into()
-        }
-    }
-
-    fn calc_score(&self) -> u32 {
-        self.winning_numbers
-            .intersection(&self.card_numbers)
-            .enumerate()
-            .last()
-            .map(|(idx, _)| (2_u32).pow(idx as u32))
-            .unwrap_or(0)
-    }
-
-    fn get_num_matching(&self) -> usize {
-        match self.num_matching.get() {
-            None => {
-                let n = self.winning_numbers
-                    .intersection(&self.card_numbers)
-                    .count();
-                self.num_matching.replace(Some(n));
-                n
-            }
-            Some(n) => n
-        }
-    }
-}
+use std::str::FromStr;
+use day4::*;
 
 fn calc_amount_scratch_cards(cards: &[Card]) -> usize {
     let mut to_visit = Vec::from_iter(cards);
@@ -85,6 +25,7 @@ fn main() {
 
     let cards = input.lines()
         .map(Card::from_str)
+        .map(|result| result.unwrap())
         .collect::<Vec<Card>>();
 
     let score = calc_amount_scratch_cards(cards.as_slice());
@@ -108,6 +49,7 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
 
         let cards = input.lines()
             .map(Card::from_str)
+            .map(|result| result.unwrap())
             .collect::<Vec<Card>>();
 
         let score = calc_amount_scratch_cards(cards.as_slice());
