@@ -61,7 +61,7 @@ impl FromStr for Mapping {
     }
 }
 
-fn parse_game(input: &str) -> (Vec<u32>, Vec<Mapping>) {
+fn parse_game(input: &str) -> (Vec<(u32, u32)>, Vec<Mapping>) {
     let mut lines = input.lines();
     let line = lines.next().unwrap();
 
@@ -72,11 +72,12 @@ fn parse_game(input: &str) -> (Vec<u32>, Vec<Mapping>) {
         panic!("Couldn't parse seeds");
     };
 
-    let seed_nums: Vec<u32> = seeds_caps.name("seednums")
+    let seed_nums = seeds_caps.name("seednums")
         .unwrap().as_str()
         .split_whitespace()
-        .map(|x| x.parse().unwrap())
-        .collect();
+        .map(|x| x.parse::<u32>().unwrap())
+        .tuples()
+        .collect::<Vec<(u32, u32)>>();
 
     // Parse mappings
     let map_re = Regex::new(r"(?<maptype>[\w-]+) map:\n(?<mapnumbers>(\d+ \d+ \d+\s?)+)").unwrap();
@@ -101,9 +102,11 @@ fn main() {
     println!("Mappings: {:?}", mappings);
 
     let locations = seeds.iter().copied()
-        .map(|seed| mappings.iter().fold(seed, |acc, el| {
-            el.map(acc)
-        }))
+        .flat_map(|(seed_num, len)| {
+            (seed_num..seed_num+len).map(|seed_n| {
+                mappings.iter().fold(seed_n, |acc, el| el.map(acc))
+            })
+        })
         .collect::<Vec<u32>>();
 
     println!("Locations: {:?}", locations);
@@ -155,9 +158,11 @@ humidity-to-location map:
         println!("Mappings: {:?}", mappings);
 
         let locations = seeds.iter().copied()
-            .map(|seed| mappings.iter().fold(seed, |acc, el| {
-                el.map(acc)
-            }))
+            .flat_map(|(seed_num, len)| {
+                (seed_num..seed_num+len).map(|seed_n| {
+                    mappings.iter().fold(seed_n, |acc, el| el.map(acc))
+                })
+            })
             .collect::<Vec<u32>>();
 
         println!("Locations: {:?}", locations);
