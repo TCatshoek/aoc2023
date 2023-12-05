@@ -2,6 +2,7 @@ use miette::{miette, Report};
 use std::str::FromStr;
 use itertools::Itertools;
 use regex::Regex;
+use rayon::prelude::*;
 
 #[derive(Debug)]
 struct Range {
@@ -98,18 +99,13 @@ fn main() {
     let input = include_str!("../input1.txt");
     let (seeds, mappings) = parse_game(input);
 
-    println!("Seeds: {:?}", seeds);
-    println!("Mappings: {:?}", mappings);
-
-    let locations = seeds.iter().copied()
+    let locations = seeds.as_slice().par_iter()
         .flat_map(|(seed_num, len)| {
-            (seed_num..seed_num+len).map(|seed_n| {
-                mappings.iter().fold(seed_n, |acc, el| el.map(acc))
-            })
+            (*seed_num..(seed_num + len)).into_par_iter()
+                .map(|seed_n| mappings.iter()
+                    .fold(seed_n, |acc, el| el.map(acc)))
         })
         .collect::<Vec<u32>>();
-
-    println!("Locations: {:?}", locations);
 
     println!("Lowest location: {}", locations.iter().min().unwrap());
 }
