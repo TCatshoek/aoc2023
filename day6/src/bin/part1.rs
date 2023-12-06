@@ -1,4 +1,5 @@
 use std::iter::zip;
+use std::time::Instant;
 use day6::*;
 
 fn parse_games(input: &str) -> Vec<(Num, Num)> {
@@ -24,12 +25,25 @@ fn main() {
 
     let games = parse_games(input);
 
-    let score = games.iter().map(|game| {
+    let start_search = Instant::now();
+    let score_search = games.iter().map(|game| {
         let (low, high) = search(game.0, game.1);
         high - low + 1
     }).product::<Num>();
+    let duration_search = start_search.elapsed();
 
-    println!("Score: {}", score);
+    let start_calc = Instant::now();
+    let score_calc = games.iter().map(|game| {
+        let (low, high) = search(game.0, game.1);
+        high - low + 1
+    }).product::<Num>();
+    let duration_calc = start_calc.elapsed();
+
+    assert_eq!(score_search, score_calc);
+
+    println!("Score: {}", score_search);
+    println!("Search took: {:?}", duration_search);
+    println!("Calc took: {:?}", duration_calc);
 }
 
 #[cfg(test)]

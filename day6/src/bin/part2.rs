@@ -1,3 +1,4 @@
+use std::time::Instant;
 use day6::*;
 
 fn parse_game(input: &str) -> (Num, Num) {
@@ -23,10 +24,22 @@ fn parse_game(input: &str) -> (Num, Num) {
 fn main() {
     let input = include_str!("../input1.txt");
     let (time, distance) = parse_game(input);
-    let (low, high) = search(time, distance);
-    let score = high - low + 1;
 
-    println!("Score: {}", score);
+    let start_search = Instant::now();
+    let (low, high) = search(time, distance);
+    let duration_search = start_search.elapsed();
+    let score_search = high - low + 1;
+
+    let start_calc = Instant::now();
+    let (low, high) = calculate(time, distance);
+    let duration_calc = start_calc.elapsed();
+    let score_calc = high - low + 1;
+
+    assert_eq!(score_calc, score_search, "Scores not equal!");
+
+    println!("Score: {}", score_search);
+    println!("Search took: {:?}", duration_search);
+    println!("Calc took: {:?}", duration_calc);
 }
 
 #[cfg(test)]

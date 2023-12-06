@@ -74,7 +74,30 @@ pub fn search(duration: Num, record_distance: Num) -> (Num, Num) {
     let (left_bounds, right_bounds) = get_bounds(duration);
     let left = do_search(left_bounds.1, left_bounds.0, record_distance, duration, SearchDirection::Left);
     let right = do_search(right_bounds.1, right_bounds.0, record_distance, duration, SearchDirection::Right);
+
     (left, right)
+}
+
+pub fn calculate(duration: Num, record_distance: Num) -> (Num, Num) {
+    let a = 1.0;
+    let b = duration as FNum;
+    let c = record_distance as FNum;
+
+    let mut left_f = -(-b + (b * b - 4.0 * a * c).sqrt()) / 2.0 * a;
+    let mut right_f = -(-b - (b * b - 4.0 * a * c).sqrt()) / 2.0 * a;
+
+    // To prevent rounding issues on "whole" numbers
+    if left_f.fract() == 0.0 {
+        left_f += 1e-32;
+    }
+    if right_f.fract() == 0.0 {
+        right_f -= 1e-32;
+    }
+
+    let left_ceil = left_f.ceil() as Num;
+    let right_floor = right_f.floor() as Num;
+
+    (left_ceil, right_floor)
 }
 
 
