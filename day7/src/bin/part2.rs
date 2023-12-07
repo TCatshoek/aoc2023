@@ -67,7 +67,7 @@ impl FromStr for Hand {
     type Err = Report;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (mut cards, bid) = s.split_whitespace().collect_tuple::<(&str, &str)>()
+        let (cards, bid) = s.split_whitespace().collect_tuple::<(&str, &str)>()
             .ok_or(miette!("Failed to split tuple: {}", s))
             .and_then(|(a, b)| Ok((
                 a.graphemes(true)
@@ -131,52 +131,57 @@ impl Hand {
     fn get_type(&self) -> HandType {
         let card_counts = self.cards.iter().copied().counts();
 
-        let mut sorted_cards = self.cards;
-        sorted_cards.sort_by(|a, b| {
-            match (a, b) {
-                (Card::J, Card::J) => Ordering::Equal,
-                (Card::J, _) => Ordering::Greater,
-                (_, Card::J) => Ordering::Less,
+        let mut cards = card_counts.iter()
+            .map(|(k, v)| (*k, *v))
+            .collect::<Vec<(Card, usize)>>();
 
-                (_, _) => match card_counts[b].cmp(&card_counts[a]) {
-                    Ordering::Less => Ordering::Less,
-                    Ordering::Equal => a.cmp(b),
-                    Ordering::Greater => Ordering::Greater,
-                }
-            }
+        cards.sort_by(|a, b| {
+            a.1.cmp(&b.1)
         });
+
+        let cc = cards.iter().map(|(_, b)| *b).rev().collect::<Vec<_>>();
 
         let n_j = *card_counts.get(&Card::J).unwrap_or(&0usize);
 
-        match sorted_cards {
-            [a, b, c, d, e] if [a, b, c, d, e].iter().unique().count() == 1 => FiveOfAKind,
-            [a, b, c, d, Card::J] if [a, b, c, d].iter().unique().count() == 1 && n_j == 1 => FiveOfAKind,
-            [a, b, c, Card::J, Card::J] if [a, b, c].iter().unique().count() == 1 => FiveOfAKind,
-            [a, b, Card::J, Card::J, Card::J] if a == b => FiveOfAKind,
-            [_, Card::J, Card::J, Card::J, Card::J] => FiveOfAKind,
-
-            [a, b, c, d, _] if [a, b, c, d].iter().unique().count() == 1 => FourOfAKind,
-            [a, b, c, _, Card::J] if [a, b, c].iter().unique().count() == 1 => FourOfAKind,
-            [a, b, _, Card::J, Card::J] if a == b => FourOfAKind,
-            [_a, b, c, Card::J, Card::J] if c == b => FourOfAKind,
-            [_a, _, Card::J, Card::J, Card::J] => FourOfAKind,
-
-            [a, b, c, d, e] if [a, b, c].iter().unique().count() == 1 && d == e => FullHouse,
-            [a, b, c, _, Card::J] if [a, b, c].iter().unique().count() == 1 => FullHouse,
-
-            [a, b, c, _, _] if [a, b, c].iter().unique().count() == 1 => ThreeOfAKind,
-            [a, b, _, _, Card::J] if a == b => ThreeOfAKind,
-            [_, _, _, Card::J, Card::J] => ThreeOfAKind,
-
-            [a, b, c, d, _] if a == b && c == d => TwoPair,
-            [a, b, _, _, Card::J] if a == b => TwoPair,
-
-            [a, b, _, _, _] if a == b => OnePair,
-            [_, _, _, _, Card::J] => OnePair,
-
-            [a, b, c, d, e] if [a, b, c, d, e].iter().unique().count() == 5 => HighCard,
-
-            _ => panic!("Unknown hand: {:?}", self)
+        match cards.len() {
+            1 => FiveOfAKind,
+            2 => match n_j {
+                0 => match cc.as_slice() {
+                    [4, 1] => FourOfAKind,
+                    [3, 2] => FullHouse,
+                    _ => panic!("This should be impossible")
+                }
+                _ => FiveOfAKind,
+            }
+            3 => match n_j {
+                0 => match cc.as_slice() {
+                    [3, 1, 1] => ThreeOfAKind,
+                    [2, 2, 1] => TwoPair,
+                    _ => panic!("This should be impossible")
+                }
+                1 => match cc.as_slice() {
+                    [3, 1, 1] => FourOfAKind,
+                    [2, 2, 1] => FullHouse,
+                    _ => panic!("This should be impossible")
+                }
+                _ => match cc.as_slice() {
+                    [3, 1, 1] => FourOfAKind,
+                    [2, 2, 1] => FourOfAKind,
+                    _ => panic!("This should be impossible")
+                }
+            }
+            4 => match n_j {
+                0 => OnePair,
+                1 => ThreeOfAKind,
+                2 => ThreeOfAKind,
+                _ => panic!("This should be impossible")
+            }
+            5 => match n_j {
+                0 => HighCard,
+                1 => OnePair,
+                _ => panic!("This should be impossible")
+            }
+            _ => panic!("Can't have more than 5 cards")
         }
     }
 }
@@ -221,14 +226,84 @@ QQQJA 483";
 
         hands.sort();
 
-        for (idx, hand) in hands.iter().rev().enumerate() {
-            println!("{:?} - {}", hand, idx + 1);
+        let result = hands.iter().rev().enumerate()
+            .fold(0, |acc, (idx, el)| acc + ((idx + 1) * el.bid));
+
+        assert_eq!(result, 5905);
+    }
+
+
+    #[test]
+    fn test_input_2() {
+        let input = "2345A 1
+Q2KJJ 13
+Q2Q2Q 19
+T3T3J 17
+T3Q33 11
+2345J 3
+J345A 2
+32T3K 5
+T55J5 29
+KK677 7
+KTJJT 34
+QQQJA 31
+JJJJJ 37
+JAAAA 43
+AAAAJ 59
+AAAAA 61
+2AAAA 23
+2JJJJ 53
+JJJJ2 41";
+
+        let mut hands = input.lines()
+            .map(Hand::from_str)
+            .collect::<Result<Vec<Hand>, _>>()
+            .unwrap();
+
+        hands.sort();
+
+        for hand in &hands {
+            println!("{:?}", hand);
         }
 
         let result = hands.iter().rev().enumerate()
             .fold(0, |acc, (idx, el)| acc + ((idx + 1) * el.bid));
 
-        assert_eq!(result, 5905);
+        assert_eq!(result, 6839);
+    }
+
+    #[test]
+    fn test_input_3() {
+        let input = "AAAAA 2
+22222 3
+AAAAK 5
+22223 7
+AAAKK 11
+22233 13
+AAAKQ 17
+22234 19
+AAKKQ 23
+22334 29
+AAKQJ 31
+22345 37
+AKQJT 41
+23456 43";
+
+        let mut hands = input.lines()
+            .map(Hand::from_str)
+            .collect::<Result<Vec<Hand>, _>>()
+            .unwrap();
+
+        hands.sort();
+
+        for hand in &hands {
+            println!("{:?}", hand);
+        }
+
+        let result = hands.iter().rev().enumerate()
+            .fold(0, |acc, (idx, el)| acc + ((idx + 1) * el.bid));
+
+        assert_eq!(result, 1369);
     }
 
     #[test]
@@ -242,9 +317,6 @@ QQQJA 483";
 
         let n_hands = hands.iter().count();
         let n_unique = hands.iter().unique().count();
-
-        println!("number of hands: {}", n_hands);
-        println!("unique hands: {}", n_unique);
 
         assert_eq!(n_unique, n_hands);
     }
