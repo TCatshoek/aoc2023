@@ -224,19 +224,3 @@ XXX = (XXX, XXX)";
         assert_eq!(lcm_multiple(&[2, 5, 8, 9]), 360);
     }
 }
-//
-//     #[test]
-//     fn test_input_2() {
-//         let input = "LLR
-//
-// AAA = (BBB, BBB)
-// BBB = (AAA, ZZZ)
-// ZZZ = (ZZZ, ZZZ)";
-//
-//         let (steps, graph) = parse(input);
-//
-//         let stepcount = walk_graph(steps, &graph);
-//
-//         assert_eq!(stepcount, 6);
-//     }
-// }
