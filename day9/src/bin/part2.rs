@@ -1,7 +1,10 @@
+use std::time::Instant;
 use day9::*;
 
 fn main() {
     let input = include_str!("../input1.txt");
+
+    let start = Instant::now();
 
     let result = input.lines()
         .map(parse_line)
@@ -11,7 +14,10 @@ fn main() {
         })
         .sum::<Num>();
 
+    let duration = start.elapsed();
+
     println!("Result: {}", result);
+    println!("Time: {:?}", duration);
 }
 
 #[cfg(test)]

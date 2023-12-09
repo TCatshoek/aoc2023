@@ -15,7 +15,6 @@ pub fn all_zeroes(input: &[Num]) -> bool {
     true
 }
 
-
 // Lets try to do this without allocating :D
 pub fn calc_next(buf: &mut Vec<Num>) {
     for idx in 0..buf.len() - 1 {
