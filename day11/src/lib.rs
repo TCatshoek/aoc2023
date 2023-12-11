@@ -50,7 +50,7 @@ impl World {
         self.buf.chunks(self.width)
     }
 
-    pub fn iter_cols<'a>(&'a self) -> impl Iterator<Item = impl Iterator<Item = char> + 'a> {
+    pub fn iter_cols(&'_ self) -> impl Iterator<Item = impl Iterator<Item = char> + '_> {
         (0..self.width).map(move |col_start| {
             let mut next_index = col_start;
             std::iter::from_fn(move || {
