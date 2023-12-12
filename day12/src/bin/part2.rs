@@ -4,7 +4,7 @@ fn main() {
     let input = include_str!("../input1.txt");
 
     let result = input.lines()
-        .map(|line| parse_line(line, false))
+        .map(|line| parse_line(line, true))
         .map(|(records, groups)| count(&records, &groups, 0))
         .sum::<usize>();
 
@@ -16,7 +16,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_example_1() {
+    fn test_example_2() {
         let input = "???.### 1,1,3
 .??..??...?##. 1,1,3
 ?#?#?#?#?#?#?#? 1,3,1,6
@@ -25,10 +25,12 @@ mod tests {
 ?###???????? 3,2,1";
 
         let result = input.lines()
-            .map(|line| parse_line(line, false))
+            .map(|line| parse_line(line, true))
             .map(|(records, groups)| count(&records, &groups, 0))
             .sum::<usize>();
 
-        assert_eq!(result, 21);
+        assert_eq!(result, 525152);
     }
+
+
 }
