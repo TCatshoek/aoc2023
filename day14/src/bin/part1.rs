@@ -1,4 +1,5 @@
 use std::slice::{Chunks, Iter};
+use std::time::Instant;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct World {
@@ -116,10 +117,13 @@ fn calc_load(world: &World) -> usize {
 fn main() {
     let input = include_str!("../input1.txt");
     let mut world = World::new(input);
+    let start = Instant::now();
     slide_rocks(&mut world);
+    let end = start.elapsed();
     let result = calc_load(&world);
 
     println!("Result: {}", result);
+    println!("Took: {:?}", end);
 }
 
 #[cfg(test)]

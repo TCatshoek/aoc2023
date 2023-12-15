@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash};
 use std::slice::{Chunks, Iter};
+use std::time::Instant;
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct World {
@@ -34,17 +35,14 @@ impl World {
         x < self.width && y < self.height
     }
 
-    pub fn get(&self, x: usize, y: usize) -> Option<char> {
-        match (x, y) {
-            (x, y) if self.is_in_bounds(x, y) => {
-                self.buf.get(x + y * self.width).copied()
-            }
-            _ => None
-        }
+    #[inline]
+    pub fn get(&self, x: usize, y: usize) -> char {
+        self.buf[x + y * self.width]
     }
 
+    #[inline]
     pub fn set(&mut self, x: usize, y: usize, c: char) {
-        if !self.is_in_bounds(x, y) { panic!("out of bounds") }
+        // if !self.is_in_bounds(x, y) { panic!("out of bounds") }
         self.buf[x + y * self.width] = c;
     }
 
@@ -93,7 +91,6 @@ enum Direction {
 }
 
 fn slide_rocks(world: &mut World, direction: Direction) {
-    let mut prev_world = world.clone();
     let mut converged = false;
 
     let delta = match direction {
@@ -116,6 +113,7 @@ fn slide_rocks(world: &mut World, direction: Direction) {
     };
 
     while !converged {
+        let mut n_moved = 0;
         for y in range_y.iter().copied() {
             for x in range_x.iter().copied() {
 
@@ -133,18 +131,18 @@ fn slide_rocks(world: &mut World, direction: Direction) {
                     (y as i32 + delta.1) as usize
                 );
 
-                let cur = world.get(x, y).unwrap();
-                let next = world.get(next_x, next_y).unwrap();
+                let cur = world.get(x, y);
+                let next = world.get(next_x, next_y);
 
                 // Roll
                 if cur == 'O' && next == '.' {
+                    n_moved += 1;
                     world.set(x, y, '.');
                     world.set(next_x, next_y, 'O')
                 }
             }
         }
-        converged = *world == prev_world;
-        prev_world = world.clone();
+        converged = n_moved == 0;
     }
 }
 
@@ -181,8 +179,8 @@ fn find_period(signal: &[usize], n: usize) -> usize {
 }
 
 fn solve(world: &mut World, n_cycles: usize) -> usize {
-    let n_settle = 200;
-    let n_capture = 100;
+    let n_settle = 160;
+    let n_capture = 30;
 
     // Run for a few cycles to settle
     for _cycle in 0..n_settle {
@@ -197,7 +195,7 @@ fn solve(world: &mut World, n_cycles: usize) -> usize {
         })
         .collect::<Vec<_>>();
 
-    let period = find_period(&sequence, 50);
+    let period = find_period(&sequence, n_capture);
 
     let leftover_cycles = n_cycles - n_capture - n_settle;
     let idx = leftover_cycles % period;
@@ -213,9 +211,12 @@ fn solve(world: &mut World, n_cycles: usize) -> usize {
 fn main() {
     let input = include_str!("../input1.txt");
     let mut world = World::new(input);
+    let start = Instant::now();
     let result = solve(&mut world, 1000000000);
+    let end = start.elapsed();
 
     println!("Result: {}", result);
+    println!("Took: {:?}", end);
 }
 
 #[cfg(test)]
