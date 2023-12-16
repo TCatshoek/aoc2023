@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::Instant;
 use glam::IVec2;
 use rayon::prelude::*;
 use aoc2023::direction::Direction;
@@ -40,12 +41,21 @@ fn generate_start_positions(world: &World) -> Vec<(IVec2, Direction)> {
 
 fn main() {
     let input = include_str!("../input1.txt");
+
+    let start = Instant::now();
     let world = World::new(input);
     let start_positions = generate_start_positions(&world);
+    let parse_duration = start.elapsed();
+
+    let start = Instant::now();
     let result = start_positions.par_iter()
         .map(|(pos, dir)| walk(&world, *pos, *dir).len())
         .max().unwrap();
+    let duration = start.elapsed();
+
     println!("Result: {}", result);
+    println!("Parsing took: {:?}", parse_duration);
+    println!("Solving took: {:?}", duration);
 }
 
 #[cfg(test)]

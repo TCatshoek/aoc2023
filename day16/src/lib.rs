@@ -1,11 +1,12 @@
 use std::collections::{HashSet, VecDeque};
 use glam::IVec2;
 use itertools::Itertools;
+use rustc_hash::FxHashSet;
 use aoc2023::direction::Direction;
 use aoc2023::world::World;
 
 pub fn walk(world: &World, start_pos: IVec2, start_direction: Direction) -> Vec<IVec2> {
-    let mut visited = HashSet::new();
+    let mut visited = FxHashSet::default();
     let mut to_visit = VecDeque::new();
     to_visit.push_back((start_pos, start_direction));
 
