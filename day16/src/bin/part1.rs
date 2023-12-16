@@ -1,5 +1,4 @@
 use glam::IVec2;
-use itertools::Itertools;
 use aoc2023::direction::Direction;
 use aoc2023::world::World;
 use day16::walk;
