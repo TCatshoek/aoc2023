@@ -79,7 +79,7 @@ fn solve(world: &Map2D<u32>) -> Option<u32> {
                 let next_key = (next_pos, state.direction, state.n_steps + 1);
                 let next_cost = state.loss + cost;
 
-                if !visited.contains_key(&next_key) || *visited.get(&next_key).unwrap() > next_cost {
+                if !visited.contains_key(&next_key) {
                     heap.push(State {
                         pos: next_pos,
                         direction: state.direction,
@@ -103,7 +103,7 @@ fn solve(world: &Map2D<u32>) -> Option<u32> {
                     let next_key = (next_pos, direction, 0);
                     let next_cost = state.loss + cost;
 
-                    if !visited.contains_key(&next_key) || *visited.get(&next_key).unwrap() > next_cost {
+                    if !visited.contains_key(&next_key) {
                         heap.push(State {
                             pos: next_pos,
                             direction,
