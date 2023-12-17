@@ -42,19 +42,25 @@ fn solve(world: &Map2D<u32>) -> Option<u32> {
     let mut heap = BinaryHeap::new();
     let mut visited = HashMap::new();
 
-    heap.push(State {
+    let s1 = State {
         pos: IVec2::new(0, 0),
         direction: Direction::East,
         n_steps: 0,
         loss: 0,
-    });
+    };
 
-    heap.push(State {
+    let s2 = State {
         pos: IVec2::new(0, 0),
         direction: Direction::South,
         n_steps: 0,
         loss: 0,
-    });
+    };
+
+    heap.push(s1);
+    heap.push(s2);
+
+    visited.insert((s1.pos, s1.direction, s1.n_steps), s1.loss);
+    visited.insert((s2.pos, s2.direction, s2.n_steps), s2.loss);
 
     while let Some(state) = heap.pop() {
 
@@ -71,13 +77,16 @@ fn solve(world: &Map2D<u32>) -> Option<u32> {
             if let Some(cost) = world.get_v(next_pos) {
 
                 let next_key = (next_pos, state.direction, state.n_steps + 1);
-                if !visited.contains_key(&next_key) {//|| *visited.get(&next_key).unwrap() > state.loss + cost {
+                let next_cost = state.loss + cost;
+
+                if !visited.contains_key(&next_key) || *visited.get(&next_key).unwrap() > next_cost {
                     heap.push(State {
                         pos: next_pos,
                         direction: state.direction,
                         n_steps: state.n_steps + 1,
-                        loss: state.loss + cost,
-                    })
+                        loss: next_cost,
+                    });
+                    visited.insert(next_key, next_cost);
                 }
 
             }
@@ -92,13 +101,16 @@ fn solve(world: &Map2D<u32>) -> Option<u32> {
                 if let Some(cost) = world.get_v(next_pos) {
 
                     let next_key = (next_pos, direction, 0);
-                    if !visited.contains_key(&next_key) {//|| *visited.get(&next_key).unwrap() > state.loss + cost {
+                    let next_cost = state.loss + cost;
+
+                    if !visited.contains_key(&next_key) || *visited.get(&next_key).unwrap() > next_cost {
                         heap.push(State {
                             pos: next_pos,
                             direction,
                             n_steps: 1,
-                            loss: state.loss + cost,
-                        })
+                            loss: next_cost,
+                        });
+                        visited.insert(next_key, next_cost);
                     }
 
                 }
