@@ -1,6 +1,6 @@
 use glam::IVec2;
 
-#[derive(Eq, PartialEq, Hash, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy, Debug, Ord, PartialOrd)]
 pub enum Direction {
     North,
     East,

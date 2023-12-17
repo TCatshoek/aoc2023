@@ -1,82 +1,118 @@
 #![feature(let_chains)]
 
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 use glam::{IVec2};
 use aoc2023::direction::Direction;
 use aoc2023::map2d::Map2D;
 
-fn step(world: &Map2D<u32>, mut visited: Map2D<bool>, pos: IVec2, n_steps: u32, loss: u32, direction: Direction, cur_best: &mut u32, cache: &mut HashMap<(IVec2, u32, u32, Direction), u32>) -> u32 {
-    if cache.contains_key(&(pos, n_steps, loss, direction)) {
-        return *cache.get(&(pos, n_steps, loss, direction)).unwrap();
-    }
-
-    let mut possibilities = Vec::new();
-
-    let cur_loss = world.get_v(pos).unwrap();
-    visited.set_v(pos, true);
-
-    // At end pos
-    if pos == IVec2::new(world.width as i32 - 1, world.height as i32 - 1) && n_steps >= 3 {
-        println!("Reached end! {}, cur_best: {}", loss + cur_loss, cur_best);
-        if loss + cur_loss < *cur_best {
-            *cur_best = loss + cur_loss;
-        }
-        return loss + cur_loss;
-    }
-
-    // Continue in same direction
-    if n_steps < 9 {
-        let next_pos = pos + direction.as_delta();
-        if let Some(has_visited) = visited.get_v(next_pos) && !has_visited {
-            let new_loss = loss + cur_loss;
-            if new_loss <= *cur_best {
-                let same_dir = step(world, visited.clone(), pos + direction.as_delta(), n_steps + 1, loss + cur_loss, direction, cur_best, cache);
-                possibilities.push(same_dir)
-            }
-        }
-    }
-
-    // Change direction
-    if n_steps >= 3 {
-        let directions = [Direction::East, Direction::South, Direction::West, Direction::North];
-        directions.iter()
-            .filter(|&&d| d != direction && d != direction.opposite())
-            .for_each(|&d| {
-                let next_pos = pos + d.as_delta();
-                if let Some(has_visited) = visited.get_v(next_pos) && !has_visited {
-                    let new_loss = loss + cur_loss;
-                    if new_loss <= *cur_best {
-                        let other_dir = step(world, visited.clone(), pos + d.as_delta(), 0, loss + cur_loss, d, cur_best, cache);
-                        possibilities.push(other_dir);
-                    }
-                }
-            });
-    }
-
-    let result = *possibilities.iter().min().unwrap_or(&u32::MAX);
-    cache.insert((pos, n_steps, loss, direction), result);
-    result
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+struct State {
+    loss: u32,
+    pos: IVec2,
+    direction: Direction,
+    n_steps: u32,
 }
 
-fn solve(world: &Map2D<u32>) -> u32 {
-    let vistited = Map2D::<bool>::from_size(world.width, world.height, false);
-    let pos = IVec2::new(0, 0);
-    let n_steps = 0;
-    let loss = 0;
-    let mut cur_best = u32::MAX;
-    let mut cache = HashMap::new();
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.loss.cmp(&self.loss)
+            .then_with(|| self.pos.x.cmp(&other.pos.x))
+            .then_with(|| self.pos.y.cmp(&other.pos.y))
+            .then_with(|| self.direction.cmp(&other.direction))
+            .then_with(|| self.n_steps.cmp(&other.n_steps))
+    }
+}
 
-    let start_directions = [Direction::East, Direction::South];
-    start_directions.iter()
-        .map(|d| step(world, vistited.clone(), pos + d.as_delta(), n_steps + 1, loss, *d, &mut cur_best, &mut cache))
-        .min()
-        .unwrap()
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn get_possible_turns(direction: Direction) -> Vec<Direction> {
+    [Direction::East, Direction::South, Direction::West, Direction::North].iter()
+        .copied()
+        .filter(|&d| d != direction && d != direction.opposite())
+        .collect()
+}
+
+fn solve(world: &Map2D<u32>) -> Option<u32> {
+
+    let mut heap = BinaryHeap::new();
+    let mut visited = HashMap::new();
+
+    heap.push(State {
+        pos: IVec2::new(0, 0),
+        direction: Direction::East,
+        n_steps: 0,
+        loss: 0,
+    });
+
+    heap.push(State {
+        pos: IVec2::new(0, 0),
+        direction: Direction::South,
+        n_steps: 0,
+        loss: 0,
+    });
+
+    while let Some(state) = heap.pop() {
+
+        if state.pos == IVec2::new(world.width as i32 - 1, world.height as i32 - 1) && state.n_steps >= 4{
+            return Some(state.loss)
+        }
+
+        visited.insert((state.pos, state.direction, state.n_steps), state.loss);
+
+        // Move straight ahead
+        if state.n_steps < 10 {
+
+            let next_pos = state.pos + state.direction.as_delta();
+            if let Some(cost) = world.get_v(next_pos) {
+
+                let next_key = (next_pos, state.direction, state.n_steps + 1);
+                if !visited.contains_key(&next_key) {//|| *visited.get(&next_key).unwrap() > state.loss + cost {
+                    heap.push(State {
+                        pos: next_pos,
+                        direction: state.direction,
+                        n_steps: state.n_steps + 1,
+                        loss: state.loss + cost,
+                    })
+                }
+
+            }
+        }
+
+        // Take a turn
+        if state.n_steps >= 4 {
+
+            for direction in get_possible_turns(state.direction) {
+
+                let next_pos = state.pos + direction.as_delta();
+                if let Some(cost) = world.get_v(next_pos) {
+
+                    let next_key = (next_pos, direction, 0);
+                    if !visited.contains_key(&next_key) {//|| *visited.get(&next_key).unwrap() > state.loss + cost {
+                        heap.push(State {
+                            pos: next_pos,
+                            direction,
+                            n_steps: 1,
+                            loss: state.loss + cost,
+                        })
+                    }
+
+                }
+            }
+        }
+    };
+
+    None
 }
 
 fn main() {
     let input = include_str!("../input1.txt");
     let world = Map2D::<u32>::new(input);
-    let result = solve(&world);
+    let result = solve(&world).unwrap();
     println!("Result: {}", result);
 }
 
@@ -102,7 +138,7 @@ mod test {
 
         let world = Map2D::<u32>::new(input);
         let result = solve(&world);
-        assert_eq!(result, 94);
+        assert_eq!(result, Some(94));
     }
 
     #[test]
@@ -115,6 +151,6 @@ mod test {
 
         let world = Map2D::<u32>::new(input);
         let result = solve(&world);
-        assert_eq!(result, 71);
+        assert_eq!(result, Some(71));
     }
 }

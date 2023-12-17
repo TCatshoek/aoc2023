@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::slice::{Chunks, Iter};
-use glam::{IVec2, UVec2};
+use glam::{IVec2};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Map2D<T> {

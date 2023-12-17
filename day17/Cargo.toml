@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 aoc2023 = { path = ".."}
 glam = "0.24.2"
+itertools = "0.12.0"
