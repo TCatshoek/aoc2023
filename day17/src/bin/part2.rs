@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use glam::{IVec2};
+use rustc_hash::{FxHashMap, FxHashSet};
 use aoc2023::direction::Direction;
 use aoc2023::map2d::Map2D;
 
@@ -40,7 +41,8 @@ fn get_possible_turns(direction: Direction) -> Vec<Direction> {
 fn solve(world: &Map2D<u32>) -> Option<u32> {
 
     let mut heap = BinaryHeap::new();
-    let mut visited = HashMap::new();
+    let mut visited = FxHashMap::default();
+    // let mut visited = HashMap::new();
 
     let s1 = State {
         pos: IVec2::new(0, 0),
