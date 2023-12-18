@@ -9,6 +9,16 @@ pub enum Direction {
 }
 
 impl Direction {
+    pub fn from_udlr(input: &str) -> Self {
+        match input {
+            "U" => Direction::North,
+            "D" => Direction::South,
+            "R" => Direction::East,
+            "L" => Direction::West,
+            x => panic!("Invalid direction: {}", x)
+        }
+    }
+
     pub fn as_delta(&self) -> IVec2 {
         match self {
             Direction::North => IVec2::new(0, -1),
