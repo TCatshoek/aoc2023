@@ -19,6 +19,15 @@ impl Direction {
         }
     }
 
+    pub fn all() -> [Direction; 4] {
+        [
+            Direction::North,
+            Direction::South,
+            Direction::East,
+            Direction::West
+        ]
+    }
+
     pub fn as_delta(&self) -> IVec2 {
         match self {
             Direction::North => IVec2::new(0, -1),

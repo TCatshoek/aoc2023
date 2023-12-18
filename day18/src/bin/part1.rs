@@ -1,6 +1,10 @@
+#![feature(let_chains)]
+
+use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use glam::IVec2;
 use regex::Regex;
+use rustc_hash::FxHashSet;
 use aoc2023::direction::Direction;
 use aoc2023::map2d::Map2D;
 
@@ -33,7 +37,7 @@ struct Command {
 }
 
 fn parse(input: &str) -> Vec<Command> {
-    let re = Regex::new(r"^(?<direction>\w) (?<steps>\d) \(#(?<color>\w+)\)$").unwrap();
+    let re = Regex::new(r"^(?<direction>\w) (?<steps>\d+) \(#(?<color>\w+)\)$").unwrap();
 
     input.lines()
         .map(|line| {
@@ -53,30 +57,37 @@ fn parse(input: &str) -> Vec<Command> {
         .collect()
 }
 
-fn determine_bounds(commands: &Vec<Command>) -> IVec2 {
+fn determine_bounds(commands: &Vec<Command>) -> (IVec2, IVec2) {
     let mut pos = IVec2::new(0, 0);
     let mut max_x = 0;
     let mut max_y = 0;
+    let mut min_x = 0;
+    let mut min_y = 0;
 
     for Command { direction, n_steps, .. } in commands {
         pos += direction.as_delta() * *n_steps as i32;
         max_x = max_x.max(pos.x);
         max_y = max_y.max(pos.y);
+        min_x = min_x.min(pos.x);
+        min_y = min_y.min(pos.y);
     }
 
-    return IVec2::new(max_x, max_y);
+    return (IVec2::new(min_x, min_y), IVec2::new(max_x, max_y))
 }
 
 fn dig(commands: &Vec<Command>) -> Map2D<Block> {
-    let bounds = determine_bounds(commands);
+    let (b_min, b_max) = determine_bounds(commands);
+
+    let width = b_min.x.abs_diff(b_max.x) as usize + 1;
+    let height = b_min.y.abs_diff(b_max.y) as usize + 1;
 
     let mut world = Map2D::from_size(
-        bounds.x as usize + 1,
-        bounds.y as usize + 1,
+        width,
+        height,
         Block::Ground
     );
 
-    let mut pos = IVec2::new(0, 0);
+    let mut pos = b_min.abs();
     for Command { direction, n_steps, color } in commands {
         for _ in 0..*n_steps {
             world.set_v(pos, Block::Hole(Some(*color)));
@@ -87,28 +98,75 @@ fn dig(commands: &Vec<Command>) -> Map2D<Block> {
     world
 }
 
+fn get_edge_ground(world: &Map2D<Block>) -> FxHashSet<IVec2> {
+    let mut goals = FxHashSet::default();
+
+    goals.extend(world.iter_row(0).enumerate().filter_map(|(idx, &x)| match x {
+        Block::Ground => Some(IVec2::new(idx as i32, 0)),
+        Block::Hole(_) => None
+    }));
+
+    goals.extend(world.iter_row(world.width - 1).enumerate().filter_map(|(idx, &x)| match x {
+        Block::Ground => Some(IVec2::new(idx as i32, world.height as i32 - 1)),
+        Block::Hole(_) => None
+    }));
+
+    let first_col = world.iter_cols().next().unwrap();
+    goals.extend(first_col.enumerate().filter_map(|(idx, x)| match x {
+        Block::Ground => Some(IVec2::new(0, idx as i32)),
+        Block::Hole(_) => None
+    }));
+
+    let last_col = world.iter_cols().last().unwrap();
+    goals.extend(last_col.enumerate().filter_map(|(idx, x)| match x {
+        Block::Ground => Some(IVec2::new(world.width as i32 - 1, idx as i32)),
+        Block::Hole(_) => None
+    }));
+
+    goals
+}
+
 fn fill(world: &mut Map2D<Block>) {
+    // Time to floodfill and see if we can reach the side of the map
+    let goals = get_edge_ground(world);
+    let mut outside = FxHashSet::default();
+
     for y in 0..world.height {
         for x in 0..world.width {
-
-            if world.get(x, y).unwrap() != Block::Ground {
+            // y = 6 x = 5
+            if world.get(x, y).unwrap() != Block::Ground
+                || outside.contains(&IVec2::new(x as i32, y as i32)){
                 continue;
             }
 
-            let mut in_wall = false;
-            let mut n_crossings = 0;
+            let mut visited = FxHashSet::default();
+            let mut to_visit = VecDeque::new();
 
-            for b in world.iter_row(y).skip(x) {
-                match (b, in_wall) {
-                    (Block::Ground, true) => {in_wall = false;}
-                    (Block::Ground, false) => {}
-                    (Block::Hole(_), true) => {}
-                    (Block::Hole(_), false) => {in_wall = true; n_crossings += 1}
-                };
-            };
+            to_visit.push_back(IVec2::new(x as i32, y as i32));
 
-            if n_crossings % 2 == 1 {
-                world.set(x, y, Block::Hole(None));
+            while let Some(pos) = to_visit.pop_front() {
+                for direction in Direction::all() {
+                    let next_pos = pos + direction.as_delta();
+
+                    if visited.contains(&next_pos) {
+                        continue
+                    }
+
+                    if let Some(block) = world.get_v(next_pos) && block == Block::Ground {
+                        to_visit.push_back(next_pos);
+                        visited.insert(next_pos);
+                    }
+                }
+            }
+
+            if visited.intersection(&goals).count() == 0 {
+                for pos in visited {
+                    world.set_v(pos, Block::Hole(None))
+                }
+            } else {
+                for pos in visited {
+                    outside.insert(pos);
+                }
             }
         }
     }
@@ -127,8 +185,19 @@ fn count(world: &Map2D<Block>) -> i32 {
     count
 }
 
+fn solve(input: &str) -> i32 {
+    let commands = parse(input);
+    let mut world = dig(&commands);
+    println!("World: \n{:?}", world);
+    fill(&mut world);
+    println!("Filled: \n{:?}", world);
+    count(&world)
+}
+
 fn main() {
-    println!("Hello, world!");
+    let input = include_str!("../input.txt");
+    let result = solve(input);
+    println!("Result: {}", result);
 }
 
 #[cfg(test)]
