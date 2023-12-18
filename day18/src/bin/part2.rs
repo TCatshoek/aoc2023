@@ -89,7 +89,7 @@ fn determine_bounds(commands: &Vec<Command>) -> (IVec2, IVec2) {
     return (IVec2::new(min_x, min_y), IVec2::new(max_x, max_y));
 }
 
-struct Segment(IVec2, IVec2);
+struct Segment(IVec2, IVec2, Direction);
 
 impl Segment {
     fn crosses_y(&self, y: i32) -> bool {
@@ -103,84 +103,84 @@ impl Segment {
         let max = self.0.x.max(self.1.x);
         min <= x && x < max
     }
+
+    fn length(&self) -> IVec2 {
+        (self.0 - self.1).abs()
+    }
 }
 
-fn get_segments(commands: &Vec<Command>) -> (Vec<Segment>, Vec<Segment>) {
-    let (b_min, b_max) = determine_bounds(commands);
-    let mut vertical_segments = Vec::new();
-    let mut horizontal_segments = Vec::new();
+fn get_segments(commands: &Vec<Command>) -> Vec<Segment> {
+    let (b_min, _) = determine_bounds(commands);
+    let mut segments = Vec::new();
 
     let mut pos = b_min.abs();
     for Command { direction, n_steps, color } in commands {
         let new_pos = pos + direction.as_delta() * *n_steps;
-        match direction {
-            Direction::North | Direction::South => vertical_segments.push(Segment(pos, new_pos)),
-            Direction::East | Direction::West => horizontal_segments.push(Segment(pos, new_pos))
-        };
+        segments.push(Segment(pos, new_pos, *direction));
         pos = new_pos;
     }
-    (vertical_segments, horizontal_segments)
+    segments
 }
 
-fn solve(commands: &Vec<Command>) -> u64 {
-    // Horizontal segments |
-    let (vertical_segments, horizontal_segments) = get_segments(&commands);
+fn solve(commands: &Vec<Command>) -> i64 {
+    let segments = get_segments(&commands);
 
-    // y value of segment endpoints projected on the y axis
-    let points = vertical_segments.iter()
-        .flat_map(|s| [s.0.y, s.1.y])
-        .unique()
-        .sorted()
-        .collect::<Vec<_>>();
+    let mut total: i64 = 0;
 
-    // Horizontal segments divided into parts
-    let segment_parts = points.windows(2)
-        .map(|window| {
-            if let [a, b] = *window {
-                Segment(IVec2::new(0, a), IVec2::new(0, b))
-            } else { panic!() }
-        })
-        .collect::<Vec<_>>();
+    for (idx, segment) in segments.iter().enumerate() {
+        let prev_idx = match idx {
+            0 => segments.len() - 1,
+            x => x - 1
+        };
+        let next_idx = (idx + 1) % segments.len();
 
-    let results = segment_parts.iter()
-        .map(|seg_part| {
+        let prev_dir = segments.get(prev_idx).unwrap().2;
+        let next_dir = segments.get(next_idx).unwrap().2;
 
-            let crossings = vertical_segments.iter()
-                .filter(|seg| seg.crosses_y(seg_part.0.y))
-                .map(|seg| seg.0.x)
-                .sorted()
-                .collect::<Vec<_>>();
+        match segment.2 {
+            Direction::North => {
+                let mut edges = 0;
+                if prev_dir == Direction::East {
+                    edges += 1;
+                }
+                if next_dir == Direction::West {
+                    edges += 1;
+                }
 
-            let height = seg_part.0.y.abs_diff(seg_part.1.y);
-            let mut inside = true;
+                let segment_length = segment.length().y + 1;
 
-            let box_area = crossings.windows(2)
-                .map(|window| {
-                    if let [a, b] = *window {
-                        let width = a.abs_diff(b) + 1;
-                        return if inside {
-                            inside = false;
-                            width as u64 * height as u64
-                        } else {
-                            inside = true;
-                            0
-                        }
-                    } else {panic!()}
-                })
-                .sum::<u64>();
+                let to_sub = (segment_length - edges) as i64 * segment.0.x as i64;
 
-            box_area
+                total -= to_sub
+            }
+            Direction::South => {
+                let mut edges = 0;
+                if prev_dir == Direction::West {
+                    edges += 1;
+                }
+                if next_dir == Direction::East {
+                    edges += 1;
+                }
 
-        })
-        .collect::<Vec<_>>();
+                let segment_length = segment.length().y + 1;
 
-    results.iter().sum()
+                let to_add = (segment_length - edges) as i64 * (segment.0.x + 1) as i64;
+
+                total += to_add;
+            }
+
+            _ => {}
+        }
+    }
+
+    total
 }
 
 fn main() {
-    // let input = include_str!("../input.txt");
-    // let result = solve(input);
-    // println!("Result: {}", result);
+    let input = include_str!("../input.txt");
+    let commands = parse_pt2(input);
+    let result = solve(&commands);
+    println!("Result: {}", result);
 }
 
 #[cfg(test)]
@@ -206,6 +206,27 @@ U 2 (#7a21e3)";
         let commands = parse_pt1(input);
         let result = solve(&commands);
         assert_eq!(result, 62);
+    }
+
+    #[test]
+    fn test_input_1_pt2() {
+        let input = "R 6 (#70c710)
+D 5 (#0dc571)
+L 2 (#5713f0)
+D 2 (#d2c081)
+R 2 (#59c680)
+D 2 (#411b91)
+L 5 (#8ceee2)
+U 2 (#caa173)
+L 1 (#1b58a2)
+U 2 (#caa171)
+R 2 (#7807d2)
+U 3 (#a77fa3)
+L 2 (#015232)
+U 2 (#7a21e3)";
+        let commands = parse_pt2(input);
+        let result = solve(&commands);
+        assert_eq!(result, 952408144115);
     }
 
     #[test]
