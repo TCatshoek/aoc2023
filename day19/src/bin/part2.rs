@@ -212,8 +212,10 @@ fn find_possibilities(constraint_sets: Vec<Vec<Constraint>>) -> u64 {
 
 fn main() {
     let input = include_str!("../input.txt");
-
     let workflows = parse(input);
+    let constraints = get_constraints(workflows);
+    let result = find_possibilities(constraints);
+    println!("Result: {}", result);
 }
 
 #[cfg(test)]
